@@ -26,7 +26,10 @@ class _HomeShellState extends State<HomeShell> {
       SnackBar(
         content: Text(
           mensaje,
-          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w600,
+          ),
         ),
         backgroundColor: Colors.teal.shade700,
         behavior: SnackBarBehavior.floating,
@@ -45,18 +48,17 @@ class _HomeShellState extends State<HomeShell> {
             title: Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 3,
+                  ),
                   decoration: BoxDecoration(
                     color: AppTheme.amberMinero,
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: const Text(
                     'MINA-OPS',
-                    style: TextStyle(
-                      color: AppTheme.fondoOscuro,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12,
-                    ),
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
                   ),
                 ),
                 const SizedBox(width: 10),
@@ -75,7 +77,6 @@ class _HomeShellState extends State<HomeShell> {
               ? FloatingActionButton.extended(
                   onPressed: _controller.abrirCapturaHorometro,
                   backgroundColor: AppTheme.amberMinero,
-                  foregroundColor: AppTheme.fondoOscuro,
                   icon: const Icon(Icons.add),
                   label: const Text(
                     'Registrar Horómetro',
