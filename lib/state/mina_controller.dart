@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../core/api_service.dart';
 import '../core/date_utils_mina.dart';
 import '../models/equipo.dart';
 import '../models/registro_horometro.dart';
@@ -8,69 +9,118 @@ class MinaController extends ChangeNotifier {
   int desfaseSemana = 0;
   String? equipoFiltroId;
 
+  bool cargando = false;
+  String? errorConexion;
+
   bool vieneDeHorometro = false;
   String? equipoPreseleccionadoId;
   String horometroFinalTemporal = '';
 
-  final List<Equipo> equipos = [
-    Equipo(
-      id: 'eq-1',
-      codigo: 'SCOOP-01',
-      tipo: 'Scooptram',
-      marca: 'Caterpillar',
-      modelo: 'R1600H',
-      horometroBase: 1200.0,
-      ultimoHorometro: 1214.5,
-      mina: 'Unidad Sur',
-    ),
-    Equipo(
-      id: 'eq-2',
-      codigo: 'VOL-04',
-      tipo: 'Volquete / Dumper',
-      marca: 'Volvo',
-      modelo: 'FMX 8x4',
-      horometroBase: 3400.0,
-      ultimoHorometro: 3408.0,
-      mina: 'Tajo Norte',
-    ),
-  ];
-
-  late final List<RegistroHorometro> registros;
+  final List<Equipo> equipos = [];
+  final List<RegistroHorometro> registros = [];
 
   MinaController() {
-    final hoy = DateTime.now();
-    registros = [
-      RegistroHorometro(
-        id: 'r-1',
-        equipoId: 'eq-1',
-        fecha: hoy,
-        turno: 'Día',
-        horometroInicial: 1200.0,
-        horometroFinal: 1207.5,
-        horasOperadas: 7.5,
-        observaciones: 'Limpieza Nv 320',
-      ),
-      RegistroHorometro(
-        id: 'r-2',
-        equipoId: 'eq-1',
-        fecha: hoy,
-        turno: 'Noche',
-        horometroInicial: 1207.5,
-        horometroFinal: 1214.5,
-        horasOperadas: 7.0,
-        observaciones: 'Sin novedades',
-      ),
-      RegistroHorometro(
-        id: 'r-3',
-        equipoId: 'eq-2',
-        fecha: hoy,
-        turno: 'Día',
-        horometroInicial: 3400.0,
-        horometroFinal: 3408.0,
-        horasOperadas: 8.0,
-        observaciones: 'Acarreo desmonte',
-      ),
-    ];
+    cargarDesdeBanaHosting();
+  }
+
+  String _inferirTipo(String codigo) {
+    final c = codigo.toUpperCase();
+    if (c.contains('TI')) return 'Torre Iluminación';
+    if (c.contains('GE')) return 'Grupo Electrógeno';
+    return 'Luminaria / Equipo';
+  }
+
+  String _formatearFechaISO(DateTime f) {
+    final y = f.year.toString();
+    final m = f.month.toString().padLeft(2, '0');
+    final d = f.day.toString().padLeft(2, '0');
+    return '$y-$m-$d';
+  }
+
+  Future<void> cargarDesdeBanaHosting() async {
+    cargando = true;
+    errorConexion = null;
+    notifyListeners();
+
+    try {
+      final filas = await ApiService.obtenerFilasLuminarias();
+
+      final Map<String, List<dynamic>> porCodigo = {};
+      for (final f in filas) {
+        final cod = (f['codigo'] ?? '').toString().trim().toUpperCase();
+        if (cod.isEmpty) continue;
+        porCodigo.putIfAbsent(cod, () => []).add(f);
+      }
+
+      equipos.clear();
+      registros.clear();
+
+      for (final entry in porCodigo.entries) {
+        final cod = entry.key;
+        final lista = entry.value;
+
+        lista.sort((a, b) {
+          final cmpFecha = a['fecha_registro'].toString().compareTo(
+            b['fecha_registro'].toString(),
+          );
+          if (cmpFecha != 0) return cmpFecha;
+          final hA = double.tryParse(a['horometro'].toString()) ?? 0.0;
+          final hB = double.tryParse(b['horometro'].toString()) ?? 0.0;
+          return hA.compareTo(hB);
+        });
+
+        final primero = lista.first;
+        final ultimo = lista.last;
+        final hBase = double.tryParse(primero['horometro'].toString()) ?? 0.0;
+        final hUltimo =
+            double.tryParse(ultimo['horometro'].toString()) ?? hBase;
+
+        equipos.add(
+          Equipo(
+            id: cod,
+            codigo: cod,
+            tipo: _inferirTipo(cod),
+            marca: 'Área',
+            modelo: (ultimo['area_zona'] ?? 'SIN ÁREA').toString(),
+            horometroBase: hBase,
+            ultimoHorometro: hUltimo,
+            mina: (ultimo['area_zona'] ?? 'SIN ÁREA').toString(),
+            estado: (ultimo['estado'] ?? 'OPERATIVO').toString(),
+          ),
+        );
+
+        double? horometroAnterior;
+        for (final fila in lista) {
+          final hActual = double.tryParse(fila['horometro'].toString()) ?? 0.0;
+          final hIni = horometroAnterior ?? hActual;
+          final diff = (hActual - hIni) > 0 ? (hActual - hIni) : 0.0;
+          final fecha =
+              DateTime.tryParse(fila['fecha_registro'].toString()) ??
+              DateTime.now();
+
+          registros.add(
+            RegistroHorometro(
+              id: fila['id'].toString(),
+              equipoId: cod,
+              fecha: fecha,
+              turno: (fila['area_zona'] ?? 'General').toString(),
+              horometroInicial: hIni,
+              horometroFinal: hActual,
+              horasOperadas: double.parse(diff.toStringAsFixed(1)),
+              observaciones: (fila['observacion'] ?? '').toString(),
+            ),
+          );
+          horometroAnterior = hActual;
+        }
+      }
+
+      equipos.sort((a, b) => a.codigo.compareTo(b.codigo));
+    } catch (e) {
+      errorConexion = e.toString();
+    } finally {
+      cargando = false;
+      notifyListeners();
+    }
   }
 
   List<RegistroHorometro> get registrosSemanaActual {
@@ -129,25 +179,48 @@ class MinaController extends ChangeNotifier {
     notifyListeners();
   }
 
-  void guardarRegistroHorometro(RegistroHorometro nuevo) {
-    registros.add(nuevo);
-    final idx = equipos.indexWhere((e) => e.id == nuevo.equipoId);
-    if (idx != -1) {
-      equipos[idx].ultimoHorometro = nuevo.horometroFinal;
-    }
+  Future<void> guardarRegistroHorometro(RegistroHorometro nuevo) async {
+    final eqIndex = equipos.indexWhere((e) => e.id == nuevo.equipoId);
+    final areaActual = eqIndex != -1 ? equipos[eqIndex].mina : nuevo.turno;
+    final estadoActual = eqIndex != -1 ? equipos[eqIndex].estado : 'OPERATIVO';
+    final fechaISO = _formatearFechaISO(nuevo.fecha);
+
+    await ApiService.insertarFilaLuminaria(
+      codigo: nuevo.equipoId,
+      areaZona: areaActual,
+      estado: estadoActual,
+      fechaRegistro: fechaISO,
+      observacion: nuevo.observaciones.isEmpty
+          ? 'SIN OBSERVACIÓN'
+          : nuevo.observaciones,
+      horometro: nuevo.horometroFinal,
+    );
+
     horometroFinalTemporal = '';
     indicePantalla = 0;
-    notifyListeners();
+    await cargarDesdeBanaHosting();
   }
 
   bool codigoEquipoExiste(String codigo) {
     return equipos.any((e) => e.codigo.toUpperCase() == codigo.toUpperCase());
   }
 
-  void guardarNuevoEquipo(Equipo nuevo) {
-    equipos.add(nuevo);
+  Future<void> guardarNuevoEquipo(Equipo nuevo) async {
+    final fechaISO = _formatearFechaISO(DateTime.now());
+
+    await ApiService.insertarFilaLuminaria(
+      codigo: nuevo.codigo,
+      areaZona: nuevo.mina,
+      estado: nuevo.estado,
+      fechaRegistro: fechaISO,
+      observacion: 'ALTA INICIAL DE EQUIPO',
+      horometro: nuevo.horometroBase,
+    );
+
+    await cargarDesdeBanaHosting();
+
     if (vieneDeHorometro) {
-      equipoPreseleccionadoId = nuevo.id;
+      equipoPreseleccionadoId = nuevo.codigo;
       indicePantalla = 1;
     } else {
       indicePantalla = 0;

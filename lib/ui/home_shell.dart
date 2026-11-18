@@ -26,12 +26,9 @@ class _HomeShellState extends State<HomeShell> {
       SnackBar(
         content: Text(
           mensaje,
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w600,
-          ),
+          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
         ),
-        backgroundColor: Colors.teal.shade700,
+        backgroundColor: AppTheme.verdeOperativo,
         behavior: SnackBarBehavior.floating,
       ),
     );
@@ -44,39 +41,87 @@ class _HomeShellState extends State<HomeShell> {
       builder: (context, _) {
         return Scaffold(
           appBar: AppBar(
-            backgroundColor: AppTheme.superficie,
+            backgroundColor: AppTheme.azulCorporativo,
             title: Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 6,
-                    vertical: 3,
-                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
                     color: AppTheme.amberMinero,
-                    borderRadius: BorderRadius.circular(4),
+                    borderRadius: BorderRadius.circular(6),
                   ),
                   child: const Text(
                     'MINA-OPS',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 11,
+                      letterSpacing: 0.5,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 10),
-                const Text(
-                  'Control de Horómetros',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                const Expanded(
+                  child: Text(
+                    'Control de Horómetros',
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
+                  ),
                 ),
               ],
             ),
+            actions: [
+              IconButton(
+                onPressed: _controller.cargando ? null : _controller.cargarDesdeBanaHosting,
+                icon: _controller.cargando
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      )
+                    : const Icon(Icons.sync, color: Colors.white),
+                tooltip: 'Sincronizar con BanaHosting',
+              ),
+            ],
           ),
-          body: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: _construirPantalla(_controller.indicePantalla),
+          body: Column(
+            children: [
+              if (_controller.errorConexion != null)
+                Container(
+                  width: double.infinity,
+                  color: const Color(0xFFFEE2E2),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.cloud_off, size: 18, color: Colors.redAccent),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Verifica tu URL/credenciales en api_service.dart: ${_controller.errorConexion}',
+                          style: const TextStyle(fontSize: 11, color: Colors.redAccent, fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.all(14.0),
+                  child: _construirPantalla(_controller.indicePantalla),
+                ),
+              ),
+            ],
           ),
           floatingActionButton: _controller.indicePantalla == 0
               ? FloatingActionButton.extended(
                   onPressed: _controller.abrirCapturaHorometro,
                   backgroundColor: AppTheme.amberMinero,
+                  foregroundColor: Colors.white,
+                  elevation: 3,
                   icon: const Icon(Icons.add),
                   label: const Text(
                     'Registrar Horómetro',
@@ -85,23 +130,25 @@ class _HomeShellState extends State<HomeShell> {
                 )
               : null,
           bottomNavigationBar: NavigationBar(
-            backgroundColor: AppTheme.superficie,
+            backgroundColor: Colors.white,
+            elevation: 8,
+            indicatorColor: const Color(0xFFDBEAFE),
             selectedIndex: _controller.indicePantalla,
             onDestinationSelected: _controller.cambiarPestana,
             destinations: const [
               NavigationDestination(
                 icon: Icon(Icons.dashboard_outlined),
-                selectedIcon: Icon(Icons.dashboard),
+                selectedIcon: Icon(Icons.dashboard, color: AppTheme.azulCorporativo),
                 label: 'Dashboard',
               ),
               NavigationDestination(
                 icon: Icon(Icons.add_circle_outline),
-                selectedIcon: Icon(Icons.add_circle),
+                selectedIcon: Icon(Icons.add_circle, color: AppTheme.azulCorporativo),
                 label: '+ Horómetro',
               ),
               NavigationDestination(
                 icon: Icon(Icons.precision_manufacturing_outlined),
-                selectedIcon: Icon(Icons.precision_manufacturing),
+                selectedIcon: Icon(Icons.precision_manufacturing, color: AppTheme.azulCorporativo),
                 label: 'Equipos',
               ),
             ],
