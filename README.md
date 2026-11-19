@@ -18,11 +18,11 @@
 
   <p>
     <a href="#-descripción-general">Descripción</a> •
+    <a href="#-vista-previa">Vista Previa</a> •
     <a href="#-funcionalidades-clave">Funcionalidades</a> •
     <a href="#-arquitectura-del-sistema">Arquitectura</a> •
     <a href="#-instalación-y-despliegue">Instalación</a> •
-    <a href="#-seguridad">Seguridad</a> •
-    <a href="#-autor">Autor</a>
+    <a href="#-seguridad">Seguridad</a>
   </p>
 </div>
 
@@ -32,7 +32,19 @@
 
 En operaciones mineras, el control manual de horómetros suele generar retrasos en la consolidación de horas trabajadas, errores de digitación y pérdida de trazabilidad por zona.
 
-**MINA-OPS** resuelve este problema mediante una aplicación móvil (**Android**) y **Web** conectada en tiempo real a un backend centralizado. Permite digitalizar las lecturas diarias de equipos auxiliares (torres de iluminación `CO-TI`, grupos electrógenos `CO-GE`, entre otros), calcular horas operadas automáticamente y emitir reportes consolidados en formato **Excel (`.xlsx`)** listos para supervisión y facturación.
+**MINA-OPS** resuelve este problema mediante una aplicación móvil (**Android**) y **Web** conectada en tiempo real a un backend centralizado. Permite digitalizar las lecturas diarias de equipos auxiliares (torres de iluminación `CO-TI`, grupos electrógenos `CO-GE` y maquinaria auxiliar), calcular horas operadas automáticamente y emitir reportes consolidados en **Excel (`.xlsx`)** listos para supervisión y facturación.
+
+---
+
+## 📸 Vista Previa
+
+<div align="center">
+
+| Dashboard Operativo | Registro de Horómetro | Gestión de Equipos | Reportes Excel |
+| :---: | :---: | :---: | :---: |
+| <img src="docs/screenshots/dashboard.png" alt="Dashboard Operativo" width="190" /> | <img src="docs/screenshots/horometro.png" alt="Registro de Horómetro" width="190" /> | <img src="docs/screenshots/equipos.png" alt="Gestión de Equipos" width="190" /> | <img src="docs/screenshots/reportes.png" alt="Exportar Reportes Excel" width="190" /> |
+
+</div>
 
 ---
 
@@ -40,12 +52,12 @@ En operaciones mineras, el control manual de horómetros suele generar retrasos 
 
 | Módulo | Capacidades Principales |
 | :--- | :--- |
-| **📊 Dashboard Operativo** | Indicadores diarios y semanales (KPIs): total de horas operadas, cantidad de lecturas, promedio de horas y navegación ágil por calendario. |
-| **⏱️ Registro de Horómetros** | Precarga automática del último horómetro del equipo, validación de integridad de lecturas, edición y eliminación controlada. |
-| **🚜 Gestión de Flota** | Alta y administración de equipos clasificados por código interno (`CO-TI`, `CO-GE`), área/zona de operación, estado y observaciones. |
-| **📑 Reportes en Excel** | Generación local de archivos `.xlsx` consolidados, listos para descargar o compartir directamente por WhatsApp, correo o Drive. |
-| **☁️ Sincronización Cloud** | Persistencia en tiempo real contra base de datos MySQL a través de una API REST ligera en PHP. |
-| **📱 Diseño Responsivo** | Interfaz adaptable para smartphones en campo y navegadores de escritorio con control de escala tipográfica. |
+| **📊 Dashboard Operativo** | Panel diario de horas operadas, tarjetas KPI (*Lecturas*, *Equipos* y *Promedio*), cinta de navegación semanal y listado de lecturas del día. |
+| **⏱️ Registro de Horómetros** | Precarga automática del horómetro inicial, cálculo en vivo de horas del turno, accesos rápidos (*Hoy / Ayer*) y enlace directo para dar de alta equipos nuevos sin perder el flujo. |
+| **🚜 Gestión de Equipos** | Alta rápida en catálogo de maquinaria mediante código interno (`CO-TI-05`, `CO-GE-08`, etc.), horómetro base inicial y área/zona de operación. |
+| **📑 Exportación a Excel** | Generación de hojas de cálculo (`.xlsx`) con detalle y resumen en dos modalidades: **descarga por fecha específica** (*Hoy / Ayer* o calendario) y **descarga histórica completa**. |
+| **☁️ Sincronización Cloud** | Sincronización en tiempo real con base de datos MySQL mediante API REST en PHP y botón de actualización manual en cabecera. |
+| **📱 Diseño Responsivo** | Interfaz industrial adaptable a dispositivos Android y navegadores web con control de escala tipográfica. |
 
 ---
 
@@ -65,6 +77,8 @@ flowchart LR
 control_horom/
 ├── assets/
 │   └── log.jpg                         # Ícono oficial y branding de la aplicación
+├── docs/
+│   └── screenshots/                    # Capturas de pantalla para documentación
 ├── lib/
 │   ├── core/
 │   │   ├── api_service.dart            # Cliente HTTP para consumo de la API REST
@@ -94,8 +108,8 @@ control_horom/
 
 | Método | Endpoint | Descripción |
 | :--- | :--- | :--- |
-| `GET` | `/tu serv` | Retorna el historial completo de lecturas y equipos registrados en formato JSON. |
-| `POST` | `/tu serv` | Registra una nueva lectura de horómetro o ejecuta acciones de mantenimiento de registros. |
+| `GET` | `/api.php` | Retorna el historial completo de lecturas y equipos registrados en formato JSON. |
+| `POST` | `/api.php` | Registra una nueva lectura de horómetro o ejecuta acciones de mantenimiento de registros. |
 
 **Ejemplo de payload `POST`:**
 ```json
@@ -110,16 +124,6 @@ control_horom/
 ```
 
 </details>
-
----
-
-## 📸 Vista Previa
-
-> *Para mostrar capturas de pantalla, guarda tus imágenes en `docs/screenshots/` y reemplaza las rutas en la tabla inferior.*
-
-| Dashboard Operativo | Registro de Horómetro | Gestión de Equipos | Reportes Excel |
-| :---: | :---: | :---: | :---: |
-| *(pendiente)* | *(pendiente)* | *(pendiente)* | *(pendiente)* |
 
 ---
 
@@ -146,7 +150,7 @@ cd control_horom
 flutter pub get
 ```
 
-### 2. Ejecutar en desarrollo (sin hardcodear credenciales)
+### 2. Ejecutar en desarrollo (sin exponer credenciales)
 
 Configura el endpoint en `lib/core/api_service.dart` o pásalo como variable de entorno en tiempo de ejecución:
 
@@ -171,14 +175,14 @@ El instalador de Android se generará en `build/app/outputs/flutter-apk/app-rele
 ## 🔒 Seguridad
 
 * Las credenciales de conexión a MySQL y la URL productiva de la API se mantienen **excluidas del repositorio**.
-* Para entornos productivos se recomienda aislar la configuración del servidor en un archivo `config.php` ignorado mediante `.gitignore` e implementar validación mediante encabezado `X-API-KEY`.
+* Para entornos productivos se recomienda aislar la configuración del servidor en un archivo `config.php` ignorado mediante `.gitignore` e implementar autenticación mediante encabezado `X-API-KEY`.
 
 ---
 
 ## 🗺️ Roadmap
 
 - [x] Registro de horómetros con precarga de última lectura y cálculo de horas
-- [x] Exportación de reportes consolidados a Excel (`.xlsx`)
+- [x] Exportación de reportes diarios e históricos a Excel (`.xlsx`)
 - [x] Compilación Release para distribución en Android (APK)
 - [ ] Autenticación de endpoints mediante `X-API-KEY` / JWT
 - [ ] Modo Offline-First con sincronización automática para zonas sin cobertura

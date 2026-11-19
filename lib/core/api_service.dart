@@ -3,7 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 class ApiService {
-  static String apiUrl = 'tu direccion de api';
+  static String apiUrl = 'tu serv';
 
   static Future<List<dynamic>> obtenerFilasLuminarias() async {
     try {
