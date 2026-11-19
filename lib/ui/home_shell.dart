@@ -1,9 +1,22 @@
 import 'package:flutter/material.dart';
-import '../core/app_theme.dart';
+import 'package:flutter/services.dart';
 import '../state/mina_controller.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/registro_equipo_screen.dart';
 import 'screens/registro_horometro_screen.dart';
+import 'screens/reportes_screen.dart';
+
+/// Paleta minera: grafito + ámbar de seguridad.
+class _M {
+  static const grafito = Color(0xFF14191E);
+  static const fondo = Color(0xFFF3F5F7);
+  static const superficie = Color(0xFFFFFFFF);
+  static const borde = Color(0xFFDDE3E9);
+  static const amber = Color(0xFFFFB300);
+  static const amberOscuro = Color(0xFFB36B00);
+  static const texto = Color(0xFF14191E);
+  static const textoSec = Color(0xFF5F6C78);
+}
 
 class HomeShell extends StatefulWidget {
   const HomeShell({super.key});
@@ -21,17 +34,19 @@ class _HomeShellState extends State<HomeShell> {
     super.dispose();
   }
 
-  void _mostrarSnack(String mensaje) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          mensaje,
-          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
-        ),
-        backgroundColor: AppTheme.verdeOperativo,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+  Widget _construirPantalla(int indice) {
+    switch (indice) {
+      case 0:
+        return DashboardScreen(controller: _controller);
+      case 1:
+        return RegistroHorometroScreen(controller: _controller);
+      case 2:
+        return RegistroEquipoScreen(controller: _controller);
+      case 3:
+        return ReportesScreen(controller: _controller);
+      default:
+        return const SizedBox.shrink();
+    }
   }
 
   @override
@@ -40,23 +55,34 @@ class _HomeShellState extends State<HomeShell> {
       listenable: _controller,
       builder: (context, _) {
         return Scaffold(
+          backgroundColor: _M.fondo,
           appBar: AppBar(
-            backgroundColor: AppTheme.azulCorporativo,
+            backgroundColor: Colors.white,
+            surfaceTintColor: Colors.transparent,
+            systemOverlayStyle: SystemUiOverlayStyle.dark,
+            elevation: 0,
+            bottom: PreferredSize(
+              preferredSize: const Size.fromHeight(2),
+              child: Container(height: 2, color: _M.amber),
+            ),
             title: Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
-                    color: AppTheme.amberMinero,
-                    borderRadius: BorderRadius.circular(6),
+                    color: _M.amber,
+                    borderRadius: BorderRadius.circular(3),
                   ),
                   child: const Text(
                     'MINA-OPS',
                     style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w800,
+                      color: _M.grafito,
+                      fontWeight: FontWeight.w900,
                       fontSize: 11,
-                      letterSpacing: 0.5,
+                      letterSpacing: 1,
                     ),
                   ),
                 ),
@@ -64,11 +90,12 @@ class _HomeShellState extends State<HomeShell> {
                 const Expanded(
                   child: Text(
                     'Control de Horómetros',
+                    maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w700,
-                      color: Colors.white,
+                      color: _M.texto,
                     ),
                   ),
                 ),
@@ -76,104 +103,91 @@ class _HomeShellState extends State<HomeShell> {
             ),
             actions: [
               IconButton(
-                onPressed: _controller.cargando ? null : _controller.cargarDesdeBanaHosting,
+                onPressed: _controller.cargando
+                    ? null
+                    : _controller.cargarDesdeBanaHosting,
                 icon: _controller.cargando
                     ? const SizedBox(
                         width: 18,
                         height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: _M.amber,
+                        ),
                       )
-                    : const Icon(Icons.sync, color: Colors.white),
+                    : const Icon(Icons.sync, color: _M.amberOscuro),
                 tooltip: 'Sincronizar con BanaHosting',
               ),
             ],
           ),
-          body: Column(
-            children: [
-              if (_controller.errorConexion != null)
-                Container(
-                  width: double.infinity,
-                  color: const Color(0xFFFEE2E2),
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.cloud_off, size: 18, color: Colors.redAccent),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          'Verifica tu URL/credenciales en api_service.dart: ${_controller.errorConexion}',
-                          style: const TextStyle(fontSize: 11, color: Colors.redAccent, fontWeight: FontWeight.w600),
-                        ),
-                      ),
-                    ],
-                  ),
+          body: _controller.cargando
+              ? const Center(child: CircularProgressIndicator(color: _M.amber))
+              : _construirPantalla(_controller.indicePantalla),
+          bottomNavigationBar: DecoratedBox(
+            decoration: const BoxDecoration(
+              border: Border(top: BorderSide(color: _M.borde)),
+            ),
+            child: NavigationBarTheme(
+              data: NavigationBarThemeData(
+                backgroundColor: _M.superficie,
+                surfaceTintColor: Colors.transparent,
+                indicatorColor: _M.amber.withOpacity(0.18),
+                indicatorShape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(4),
                 ),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.all(14.0),
-                  child: _construirPantalla(_controller.indicePantalla),
-                ),
+                labelTextStyle: WidgetStateProperty.resolveWith((states) {
+                  final sel = states.contains(WidgetState.selected);
+                  return TextStyle(
+                    fontSize: 12,
+                    fontWeight: sel ? FontWeight.w800 : FontWeight.w500,
+                    color: sel ? _M.amberOscuro : _M.textoSec,
+                  );
+                }),
               ),
-            ],
-          ),
-          floatingActionButton: _controller.indicePantalla == 0
-              ? FloatingActionButton.extended(
-                  onPressed: _controller.abrirCapturaHorometro,
-                  backgroundColor: AppTheme.amberMinero,
-                  foregroundColor: Colors.white,
-                  elevation: 3,
-                  icon: const Icon(Icons.add),
-                  label: const Text(
-                    'Registrar Horómetro',
-                    style: TextStyle(fontWeight: FontWeight.bold),
+              child: NavigationBar(
+                elevation: 0,
+                labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+                selectedIndex: _controller.indicePantalla,
+                onDestinationSelected: _controller.cambiarPestana,
+                destinations: const [
+                  NavigationDestination(
+                    icon: Icon(Icons.dashboard_outlined, color: _M.textoSec),
+                    selectedIcon: Icon(Icons.dashboard, color: _M.amberOscuro),
+                    label: 'Dashboard',
                   ),
-                )
-              : null,
-          bottomNavigationBar: NavigationBar(
-            backgroundColor: Colors.white,
-            elevation: 8,
-            indicatorColor: const Color(0xFFDBEAFE),
-            selectedIndex: _controller.indicePantalla,
-            onDestinationSelected: _controller.cambiarPestana,
-            destinations: const [
-              NavigationDestination(
-                icon: Icon(Icons.dashboard_outlined),
-                selectedIcon: Icon(Icons.dashboard, color: AppTheme.azulCorporativo),
-                label: 'Dashboard',
+                  NavigationDestination(
+                    icon: Icon(Icons.add_circle_outline, color: _M.textoSec),
+                    selectedIcon: Icon(Icons.add_circle, color: _M.amberOscuro),
+                    label: '+ Horómetro',
+                  ),
+                  NavigationDestination(
+                    icon: Icon(
+                      Icons.precision_manufacturing_outlined,
+                      color: _M.textoSec,
+                    ),
+                    selectedIcon: Icon(
+                      Icons.precision_manufacturing,
+                      color: _M.amberOscuro,
+                    ),
+                    label: 'Equipos',
+                  ),
+                  NavigationDestination(
+                    icon: Icon(
+                      Icons.file_download_outlined,
+                      color: _M.textoSec,
+                    ),
+                    selectedIcon: Icon(
+                      Icons.file_download,
+                      color: _M.amberOscuro,
+                    ),
+                    label: 'Reportes',
+                  ),
+                ],
               ),
-              NavigationDestination(
-                icon: Icon(Icons.add_circle_outline),
-                selectedIcon: Icon(Icons.add_circle, color: AppTheme.azulCorporativo),
-                label: '+ Horómetro',
-              ),
-              NavigationDestination(
-                icon: Icon(Icons.precision_manufacturing_outlined),
-                selectedIcon: Icon(Icons.precision_manufacturing, color: AppTheme.azulCorporativo),
-                label: 'Equipos',
-              ),
-            ],
+            ),
           ),
         );
       },
     );
-  }
-
-  Widget _construirPantalla(int indice) {
-    switch (indice) {
-      case 0:
-        return DashboardScreen(controller: _controller);
-      case 1:
-        return RegistroHorometroScreen(
-          controller: _controller,
-          onNotificar: _mostrarSnack,
-        );
-      case 2:
-        return RegistroEquipoScreen(
-          controller: _controller,
-          onNotificar: _mostrarSnack,
-        );
-      default:
-        return const SizedBox.shrink();
-    }
   }
 }

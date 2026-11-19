@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import '../core/api_service.dart';
-import '../core/date_utils_mina.dart';
 import '../models/equipo.dart';
 import '../models/registro_horometro.dart';
 
 class MinaController extends ChangeNotifier {
   int indicePantalla = 0;
-  int desfaseSemana = 0;
   String? equipoFiltroId;
+
+  String fechaSeleccionadaISO = DateTime.now().toIso8601String().split('T')[0];
 
   bool cargando = false;
   String? errorConexion;
@@ -27,7 +27,7 @@ class MinaController extends ChangeNotifier {
     final c = codigo.toUpperCase();
     if (c.contains('TI')) return 'Torre Iluminación';
     if (c.contains('GE')) return 'Grupo Electrógeno';
-    return 'Luminaria / Equipo';
+    return 'Maquinaria / Equipo';
   }
 
   String _formatearFechaISO(DateTime f) {
@@ -59,21 +59,23 @@ class MinaController extends ChangeNotifier {
         final cod = entry.key;
         final lista = entry.value;
 
+        // Ordenar cronológicamente
         lista.sort((a, b) {
-          final cmpFecha = a['fecha_registro'].toString().compareTo(
-            b['fecha_registro'].toString(),
+          final cmpFecha = (a['fecha_registro'] ?? '').toString().compareTo(
+            (b['fecha_registro'] ?? '').toString(),
           );
           if (cmpFecha != 0) return cmpFecha;
-          final hA = double.tryParse(a['horometro'].toString()) ?? 0.0;
-          final hB = double.tryParse(b['horometro'].toString()) ?? 0.0;
+          final hA = double.tryParse(a['horometro']?.toString() ?? '0') ?? 0.0;
+          final hB = double.tryParse(b['horometro']?.toString() ?? '0') ?? 0.0;
           return hA.compareTo(hB);
         });
 
         final primero = lista.first;
         final ultimo = lista.last;
-        final hBase = double.tryParse(primero['horometro'].toString()) ?? 0.0;
+        final hBase =
+            double.tryParse(primero['horometro']?.toString() ?? '0') ?? 0.0;
         final hUltimo =
-            double.tryParse(ultimo['horometro'].toString()) ?? hBase;
+            double.tryParse(ultimo['horometro']?.toString() ?? '0') ?? hBase;
 
         equipos.add(
           Equipo(
@@ -91,16 +93,19 @@ class MinaController extends ChangeNotifier {
 
         double? horometroAnterior;
         for (final fila in lista) {
-          final hActual = double.tryParse(fila['horometro'].toString()) ?? 0.0;
+          final hActual =
+              double.tryParse(fila['horometro']?.toString() ?? '0') ?? 0.0;
           final hIni = horometroAnterior ?? hActual;
           final diff = (hActual - hIni) > 0 ? (hActual - hIni) : 0.0;
           final fecha =
-              DateTime.tryParse(fila['fecha_registro'].toString()) ??
+              DateTime.tryParse(fila['fecha_registro']?.toString() ?? '') ??
               DateTime.now();
 
           registros.add(
             RegistroHorometro(
-              id: fila['id'].toString(),
+              id:
+                  fila['id']?.toString() ??
+                  DateTime.now().millisecondsSinceEpoch.toString(),
               equipoId: cod,
               fecha: fecha,
               turno: (fila['area_zona'] ?? 'General').toString(),
@@ -115,6 +120,12 @@ class MinaController extends ChangeNotifier {
       }
 
       equipos.sort((a, b) => a.codigo.compareTo(b.codigo));
+
+      // POSICIONAR AUTOMÁTICAMENTE EN LA FECHA DEL REGISTRO MÁS RECIENTE
+      if (registros.isNotEmpty) {
+        registros.sort((a, b) => b.fecha.compareTo(a.fecha));
+        fechaSeleccionadaISO = _formatearFechaISO(registros.first.fecha);
+      }
     } catch (e) {
       errorConexion = e.toString();
     } finally {
@@ -123,11 +134,16 @@ class MinaController extends ChangeNotifier {
     }
   }
 
-  List<RegistroHorometro> get registrosSemanaActual {
-    final rango = DateUtilsMina.obtenerRangoSemana(desfaseSemana);
+  // FILTRO ESTRICTO Y CORRECTO POR DÍA (Sin mezclar historiales)
+  List<RegistroHorometro> get registrosDiaSeleccionado {
     return registros.where((r) {
-      return !r.fecha.isBefore(rango.lunes) && !r.fecha.isAfter(rango.domingo);
+      return _formatearFechaISO(r.fecha) == fechaSeleccionadaISO;
     }).toList();
+  }
+
+  void seleccionarFecha(DateTime fecha) {
+    fechaSeleccionadaISO = _formatearFechaISO(fecha);
+    notifyListeners();
   }
 
   void cambiarPestana(int nuevoIndice) {
@@ -164,13 +180,15 @@ class MinaController extends ChangeNotifier {
     notifyListeners();
   }
 
-  void cambiarSemana(int delta) {
-    desfaseSemana += delta;
+  void cambiarDiaOffset(int dias) {
+    final actual = DateTime.tryParse(fechaSeleccionadaISO) ?? DateTime.now();
+    final nueva = actual.add(Duration(days: dias));
+    fechaSeleccionadaISO = _formatearFechaISO(nueva);
     notifyListeners();
   }
 
-  void irASemanaActual() {
-    desfaseSemana = 0;
+  void irAFechaHoy() {
+    fechaSeleccionadaISO = DateTime.now().toIso8601String().split('T')[0];
     notifyListeners();
   }
 
@@ -198,6 +216,24 @@ class MinaController extends ChangeNotifier {
 
     horometroFinalTemporal = '';
     indicePantalla = 0;
+    await cargarDesdeBanaHosting();
+  }
+
+  Future<void> eliminarRegistro(String id) async {
+    await ApiService.eliminarFilaLuminaria(id: id);
+    await cargarDesdeBanaHosting();
+  }
+
+  Future<void> actualizarRegistro({
+    required String id,
+    required double horometro,
+    required String observacion,
+  }) async {
+    await ApiService.actualizarFilaLuminaria(
+      id: id,
+      horometro: horometro,
+      observacion: observacion.isEmpty ? 'SIN OBSERVACIÓN' : observacion,
+    );
     await cargarDesdeBanaHosting();
   }
 

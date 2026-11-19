@@ -18,6 +18,6 @@ class Equipo {
     required this.horometroBase,
     required this.ultimoHorometro,
     required this.mina,
-    this.estado = 'Operativo',
+    this.estado = 'OPERATIVO',
   });
 }
