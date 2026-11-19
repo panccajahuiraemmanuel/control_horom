@@ -94,8 +94,8 @@ control_horom/
 
 | Método | Endpoint | Descripción |
 | :--- | :--- | :--- |
-| `GET` | `/api.php` | Retorna el historial completo de lecturas y equipos registrados en formato JSON. |
-| `POST` | `/api.php` | Registra una nueva lectura de horómetro o ejecuta acciones de mantenimiento de registros. |
+| `GET` | `/tu serv` | Retorna el historial completo de lecturas y equipos registrados en formato JSON. |
+| `POST` | `/tu serv` | Registra una nueva lectura de horómetro o ejecuta acciones de mantenimiento de registros. |
 
 **Ejemplo de payload `POST`:**
 ```json
